@@ -16,10 +16,11 @@ export async function POST(req: NextRequest) {
   }
 
   // Recupera dati clinici del paziente
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [{ data: paziente }, { data: sedute }] = await Promise.all([
-    supabase.from("pazienti").select("nome, cognome, patologia, diagnosi, obiettivi, anamnesi, vas_iniziale").eq("id", pazienteId).single(),
-    supabase.from("sedute").select("data, trattamento, esercizi, vas_pre, vas_post, note").eq("paziente_id", pazienteId).order("data", { ascending: false }).limit(3),
-  ]);
+    (supabase as any).from("pazienti").select("nome, cognome, patologia, diagnosi, obiettivi, anamnesi, vas_iniziale").eq("id", pazienteId).single(),
+    (supabase as any).from("sedute").select("data, trattamento, esercizi, vas_pre, vas_post, note").eq("paziente_id", pazienteId).order("data", { ascending: false }).limit(3),
+  ]) as [{ data: { nome: string; cognome: string; patologia?: string; diagnosi?: string; obiettivi?: string; anamnesi?: string; vas_iniziale?: number } | null }, { data: { data: string; trattamento?: string; esercizi?: string; vas_pre?: number; vas_post?: number; note?: string }[] | null }];
 
   if (!paziente) {
     return NextResponse.json({ error: "Paziente non trovato" }, { status: 404 });
