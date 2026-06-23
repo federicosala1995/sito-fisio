@@ -1,10 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+type PazienteData = {
+  nome: string;
+  cognome: string;
+  patologia?: string;
+  diagnosi?: string;
+  obiettivi?: string;
+  anamnesi?: string;
+  vas_iniziale?: number;
+};
+
+type SedutaData = {
+  data: string;
+  trattamento?: string;
+  esercizi?: string;
+  vas_pre?: number;
+  vas_post?: number;
+  note?: string;
+};
+
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
 
-  // Auth check — solo il fisioterapista loggato
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Non autorizzato" }, { status: 401 });
@@ -15,16 +33,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "pazienteId mancante" }, { status: 400 });
   }
 
-  // Recupera dati clinici del paziente
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [{ data: paziente }, { data: sedute }] = await Promise.all([
-    (supabase as any).from("pazienti").select("nome, cognome, patologia, diagnosi, obiettivi, anamnesi, vas_iniziale").eq("id", pazienteId).single(),
-    (supabase as any).from("sedute").select("data, trattamento, esercizi, vas_pre, vas_post, note").eq("paziente_id", pazienteId).order("data", { ascending: false }).limit(3),
-  ]) as [{ data: { nome: string; cognome: string; patologia?: string; diagnosi?: string; obiettivi?: string; anamnesi?: string; vas_iniziale?: number } | null }, { data: { data: string; trattamento?: string; esercizi?: string; vas_pre?: number; vas_post?: number; note?: string }[] | null }];
+  const sup = supabase as any;
+
+  const { data: paziente } = await sup
+    .from("pazienti")
+    .select("nome, cognome, patologia, diagnosi, obiettivi, anamnesi, vas_iniziale")
+    .eq("id", pazienteId)
+    .single() as { data: PazienteData | null };
 
   if (!paziente) {
     return NextResponse.json({ error: "Paziente non trovato" }, { status: 404 });
   }
+
+  const { data: sedute } = await sup
+    .from("sedute")
+    .select("data, trattamento, esercizi, vas_pre, vas_post, note")
+    .eq("paziente_id", pazienteId)
+    .order("data", { ascending: false })
+    .limit(3) as { data: SedutaData[] | null };
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -70,8 +97,8 @@ COMPITO: Suggerisci per la prossima seduta:
       throw new Error(`Anthropic API error: ${response.status}`);
     }
 
-    const data = await response.json();
-    const piano = data.content?.[0]?.text ?? "Nessuna risposta generata.";
+    const result = await response.json();
+    const piano = result.content?.[0]?.text ?? "Nessuna risposta generata.";
 
     return NextResponse.json({ piano });
   } catch (err) {
