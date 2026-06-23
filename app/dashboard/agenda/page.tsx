@@ -9,20 +9,23 @@ export default async function AgendaPage() {
   const today = startOfToday();
   const endDate = format(addDays(today, 14), "yyyy-MM-dd");
 
-  const { data: appuntamenti } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: appuntamenti } = await (supabase as any)
     .from("appuntamenti")
     .select("id, data, ora, tipo, note_prenotaz, pazienti(id, nome, cognome, telefono)")
     .gte("data", format(today, "yyyy-MM-dd"))
     .lte("data", endDate)
     .order("data")
-    .order("ora");
+    .order("ora") as { data: { id: string; data: string; ora: string; tipo: string; note_prenotaz?: string; pazienti?: { id: string; nome: string; cognome: string; telefono?: string } }[] | null };
+
+  type AppRow = { id: string; data: string; ora: string; tipo: string; note_prenotaz?: string; pazienti?: { id: string; nome: string; cognome: string; telefono?: string } };
 
   // Raggruppa per data
-  const grouped = (appuntamenti ?? []).reduce<Record<string, typeof appuntamenti>>((acc, app) => {
+  const grouped = (appuntamenti ?? []).reduce<Record<string, AppRow[]>>((acc, app) => {
     if (!app) return acc;
-    const key = app.data;
+    const key = (app as AppRow).data;
     if (!acc[key]) acc[key] = [];
-    acc[key]!.push(app);
+    acc[key]!.push(app as AppRow);
     return acc;
   }, {});
 
