@@ -59,14 +59,9 @@ export default async function PazientiPage() {
                 </div>
 
                 {p.telefono && (
-                  <a
-                    href={`tel:${p.telefono}`}
-                    onClick={(e) => e.stopPropagation()}
-                    className="shrink-0 p-2 rounded-lg hover:bg-teal/10 transition-colors"
-                    title={p.telefono}
-                  >
-                    <Phone size={14} className="text-navy/40" />
-                  </a>
+                  <span className="shrink-0 font-inter text-xs text-navy/40">
+                    {p.telefono}
+                  </span>
                 )}
 
                 <span
